@@ -30,11 +30,15 @@ example(of: "PublishSubject") {
     
     // Add subscription to dealtHand here
     dealtHand
-        .subscribe { hand in
-            print(cardString(for: hand), points(for: hand))
-        } onError: { error in
-            print(error)
-        }
+        .subscribe(
+            onNext: { hand in
+                print(cardString(for: hand), points(for: hand))
+            },
+            onError: {
+                print($0)
+            }
+        )
+        .disposed(by: disposeBag)
 
     
     deal(3)

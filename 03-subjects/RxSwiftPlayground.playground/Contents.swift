@@ -150,26 +150,26 @@ example(of: "ReplaySubject") {
 //    relay.accept("1")
 //}
 
-example(of: "BehaviorRelay") {
-    let relay = BehaviorRelay(value: "Initial Value")
-    let disposeBag = DisposeBag()
-    
-    relay.accept("New initial value")
-    
-    relay
-        .subscribe {
-            print(label: "1)", event: $0)
-            
-        }
-        .disposed(by: disposeBag)
-    
-    relay.accept("1")
-    
-    relay
-        .subscribe {
-            print(label: "2)", event: $0)
-        }
-        .disposed(by: disposeBag)
-    
-    relay.accept("2")
-}
+//example(of: "BehaviorRelay") {
+//    let relay = BehaviorRelay(value: "Initial Value")
+//    let disposeBag = DisposeBag()
+//    
+//    relay.accept("New initial value")
+//    
+//    relay
+//        .subscribe {
+//            print(label: "1)", event: $0)
+//            
+//        }
+//        .disposed(by: disposeBag)
+//    
+//    relay.accept("1")
+//    
+//    relay
+//        .subscribe {
+//            print(label: "2)", event: $0)
+//        }
+//        .disposed(by: disposeBag)
+//    
+//    relay.accept("2")
+//}
