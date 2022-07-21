@@ -49,6 +49,7 @@ class PhotosViewController: UICollectionViewController {
   }()
   
   private let selectedPhotoSubject = PublishSubject<UIImage>()
+  private let bag = DisposeBag()
   var selectedPhotos: Observable<UIImage> {
     return selectedPhotoSubject.asObservable()
   }
@@ -62,7 +63,31 @@ class PhotosViewController: UICollectionViewController {
   // MARK: View Controller
   override func viewDidLoad() {
     super.viewDidLoad()
-
+    let authorized = PHPhotoLibrary.authorized.share()
+    
+    authorized
+      .skipWhile { !$0 }
+      .take(1)
+      .subscribe(
+        onNext: { [weak self] _ in
+          self?.photos = PhotosViewController.loadPhotos()
+          DispatchQueue.main.async {
+            self?.collectionView.reloadData()
+          }
+        }
+      )
+      .disposed(by: bag)
+    
+    authorized
+      .takeLast(1)
+      .filter { !$0 }
+      .subscribe(
+        onNext: { [weak self] _ in
+          guard let errorMessage = self?.errorMessage else  { return }
+          DispatchQueue.main.async(execute: errorMessage)
+        }
+      )
+      .disposed(by: bag)
   }
 
   override func viewWillDisappear(_ animated: Bool) {
@@ -70,6 +95,19 @@ class PhotosViewController: UICollectionViewController {
     selectedPhotoSubject.onCompleted()
   }
 
+  
+  private func errorMessage() {
+    alert(title: "No access to camera roll",
+          text: "You can grant access to Combinestagram from the settings app")
+    .asObservable()
+    .take(.seconds(5), scheduler: MainScheduler.instance)
+    .subscribe(onCompleted: { [weak self] in
+      self?.dismiss(animated: true)
+      _ = self?.navigationController?.popViewController(animated: true)
+    })
+    .disposed(by: bag)
+  }
+  
   // MARK: UICollectionView
 
   override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
