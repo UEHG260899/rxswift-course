@@ -40,6 +40,7 @@ class ViewController: UIViewController {
     @IBOutlet private var humidityLabel: UILabel!
     @IBOutlet private var iconLabel: UILabel!
     @IBOutlet private var cityNameLabel: UILabel!
+    @IBOutlet private var unitTypeSwitch: UISwitch!
     
     private let bag = DisposeBag()
     
@@ -72,25 +73,31 @@ class ViewController: UIViewController {
                 ApiController.shared
                     .currentWeather(for: text)
                     .catchErrorJustReturn(.empty)
-
+                
             }
             .asDriver(onErrorJustReturn: .empty)
-
+        
         search
-            .map { "\($0.temperature) C" }
+            .map { w in
+                if self.unitTypeSwitch.isOn {
+                    return "\(Int(Double(w.temperature) * 1.8 + 32))° F"
+                } else {
+                    return "\(w.temperature)° C"
+                }
+            }
             .drive(tempLabel.rx.text)
             .disposed(by: bag)
-
+        
         search
             .map(\.icon)
             .drive(iconLabel.rx.text)
             .disposed(by: bag)
-
+        
         search
             .map { "\($0.humidity)%" }
             .drive(humidityLabel.rx.text)
             .disposed(by: bag)
-
+        
         search
             .map(\.cityName)
             .drive(cityNameLabel.rx.text)
