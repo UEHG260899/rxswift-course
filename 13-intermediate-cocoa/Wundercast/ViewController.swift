@@ -34,6 +34,7 @@ import UIKit
 import RxSwift
 import RxCocoa
 import MapKit
+import CoreLocation
 
 class ViewController: UIViewController {
     @IBOutlet private var mapView: MKMapView!
@@ -47,6 +48,7 @@ class ViewController: UIViewController {
     @IBOutlet private var cityNameLabel: UILabel!
     
     private let bag = DisposeBag()
+    private let locationManager = CLLocationManager()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -58,16 +60,27 @@ class ViewController: UIViewController {
             .map { self.searchCityName.text ?? "" }
             .filter { !$0.isEmpty }
         
-        let search = searchInput
-            .flatMapLatest { text in
+        let textSearch = searchInput.flatMap { city in
+            ApiController.shared
+                .currentWeather(for: city)
+                .catchErrorJustReturn(.empty)
+        }
+        
+        let geoSearch = geoLocationButton.rx.tap
+            .flatMapLatest { _ in self.locationManager.rx.getCurrentLocation() }
+            .flatMapLatest { location in
                 ApiController.shared
-                    .currentWeather(for: text)
+                    .currentWeather(at: location.coordinate)
                     .catchErrorJustReturn(.empty)
             }
-            .asDriver(onErrorJustReturn: .empty)
+        
+        let search = Observable.merge(geoSearch, textSearch).asDriver(onErrorJustReturn: .empty)
+
+        
         
         let running = Observable.merge(
             searchInput.map { _ in true },
+            geoLocationButton.rx.tap.map { _ in true },
             search.map { _ in false }.asObservable()
         )
             .startWith(true)
@@ -109,6 +122,8 @@ class ViewController: UIViewController {
         search.map(\.cityName)
             .drive(cityNameLabel.rx.text)
             .disposed(by: bag)
+        
+
     }
     
     override func viewDidAppear(_ animated: Bool) {
