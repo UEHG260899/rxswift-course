@@ -35,48 +35,98 @@ import RxSwift
 import RxCocoa
 
 class ViewController: UIViewController {
-  @IBOutlet private var searchCityName: UITextField!
-  @IBOutlet private var tempLabel: UILabel!
-  @IBOutlet private var humidityLabel: UILabel!
-  @IBOutlet private var iconLabel: UILabel!
-  @IBOutlet private var cityNameLabel: UILabel!
+    @IBOutlet private var searchCityName: UITextField!
+    @IBOutlet private var tempLabel: UILabel!
+    @IBOutlet private var humidityLabel: UILabel!
+    @IBOutlet private var iconLabel: UILabel!
+    @IBOutlet private var cityNameLabel: UILabel!
+    
+    private let bag = DisposeBag()
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view, typically from a nib.
+        
+        style()
+        
+        ApiController.shared.currentWeather(for: "RxSwift")
+            .observeOn(MainScheduler.instance)
+            .subscribe(
+                onNext: { data in
+                    self.tempLabel.text = "\(data.temperature) C"
+                    self.iconLabel.text = data.icon
+                    self.humidityLabel.text = "\(data.humidity)%"
+                    self.cityNameLabel.text = data.cityName
+                }
+            )
+            .disposed(by: bag)
+        
+        
+        // controlEvent(.editingDidEndOnExit) gets called whem the user taps on search button
+        let search = searchCityName
+            .rx
+            .controlEvent(.editingDidEndOnExit)
+            .map { self.searchCityName.text ?? "" }
+            .filter { !$0.isEmpty }
+            .flatMapLatest { text in
+                ApiController.shared
+                    .currentWeather(for: text)
+                    .catchErrorJustReturn(.empty)
 
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    // Do any additional setup after loading the view, typically from a nib.
+            }
+            .asDriver(onErrorJustReturn: .empty)
 
-    style()
-  }
+        search
+            .map { "\($0.temperature) C" }
+            .drive(tempLabel.rx.text)
+            .disposed(by: bag)
 
-  override func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-  }
+        search
+            .map(\.icon)
+            .drive(iconLabel.rx.text)
+            .disposed(by: bag)
 
-  override func viewDidLayoutSubviews() {
-    super.viewDidLayoutSubviews()
+        search
+            .map { "\($0.humidity)%" }
+            .drive(humidityLabel.rx.text)
+            .disposed(by: bag)
 
-    Appearance.applyBottomLine(to: searchCityName)
-  }
-
-  override var preferredStatusBarStyle: UIStatusBarStyle {
-    return .lightContent
-  }
-
-  override func didReceiveMemoryWarning() {
-    super.didReceiveMemoryWarning()
-    // Dispose of any resources that can be recreated.
-  }
-
-  // MARK: - Style
-
-  private func style() {
-    view.backgroundColor = UIColor.aztec
-    searchCityName.attributedPlaceholder = NSAttributedString(string: "City's Name",
-                                                              attributes: [.foregroundColor: UIColor.textGrey])
-    searchCityName.textColor = UIColor.ufoGreen
-    tempLabel.textColor = UIColor.cream
-    humidityLabel.textColor = UIColor.cream
-    iconLabel.textColor = UIColor.cream
-    cityNameLabel.textColor = UIColor.cream
-  }
+        search
+            .map(\.cityName)
+            .drive(cityNameLabel.rx.text)
+            .disposed(by: bag)
+        
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        Appearance.applyBottomLine(to: searchCityName)
+    }
+    
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
+    override func didReceiveMemoryWarning() {
+        super.didReceiveMemoryWarning()
+        // Dispose of any resources that can be recreated.
+    }
+    
+    // MARK: - Style
+    
+    private func style() {
+        view.backgroundColor = UIColor.aztec
+        searchCityName.attributedPlaceholder = NSAttributedString(string: "City's Name",
+                                                                  attributes: [.foregroundColor: UIColor.textGrey])
+        searchCityName.textColor = UIColor.ufoGreen
+        tempLabel.textColor = UIColor.cream
+        humidityLabel.textColor = UIColor.cream
+        iconLabel.textColor = UIColor.cream
+        cityNameLabel.textColor = UIColor.cream
+    }
 }
