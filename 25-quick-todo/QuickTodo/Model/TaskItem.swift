@@ -43,6 +43,13 @@ class TaskItem: Object {
   @objc dynamic var checked: Date? = nil
   
   override class func primaryKey() -> String? {
-    return "id"
+    return "uid"
+  }
+}
+
+
+extension TaskItem: IdentifiableType {
+  var identity: Int {
+    return self.isInvalidated ? 0 : uid
   }
 }
